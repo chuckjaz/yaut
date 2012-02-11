@@ -1,0 +1,17 @@
+{
+	"name": "yaut",
+	"description": "Yet Another Unit Test module",
+	"author": "Chuck Jazdzewski <chuckjaz@hotmail.com> (http://removingalldoubt.com)",
+	"dependencies": {
+		"yap": ">= 0.0.1"
+	},
+
+	"version": "0.0.1",
+	"main" : "yaut.js",
+	"license" : { 
+		"type": "MS-RL",
+		"url": "http://opensource.org/licenses/MS-RL"
+	},
+	"repository": "git://github.com/chuckjaz/yaut.git",
+	"keywords": ["test", "tests", "unittest"]
+}
