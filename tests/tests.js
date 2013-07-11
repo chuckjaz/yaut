@@ -34,5 +34,21 @@ yaut.report("Test yaut", {
         assert(!equals(0, 1));
         assert(!equals("a", "b"));
         assert(!equals({a: 1, b: 2}, {a: 2, b: 1}));
+    },
+    "Returning a continuation function should work": function () {
+        return function (cb) {
+            yap.timeout(1).then(function () { cb(null, 0); });
+        }
+    },
+    "Failing a continuation should fail": function () {
+        return yaut.run({
+            test: function () {
+                return function (cb) {
+                    yap.timeout(1).then(function () { cb(new Error("failed")); });
+                }
+            }
+        }).then(function (result) {
+            assert(!result.test.success)
+        });
     }
 });

@@ -127,6 +127,10 @@
                     failed(e);
                     return;
                 }
+                if (getTypeOf(result) === "function" && result.length == 1) {
+                    // Assume the result is a continuation and wrap it in a promise
+                    result = yap.defer(function (resolve) { result(resolve); });
+                }
                 if (yap.like(result)) {
                     var time = tests.timeout || 10000;
                     var timeout = yap.timeout(time).then(function () {
