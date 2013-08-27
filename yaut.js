@@ -68,10 +68,19 @@
             throw Error(message || "Expected '" + expected + "', received '" + actual + "'");
     }
 
+    function isSpecialName(name) {
+        switch (name) {
+            case "initialize":
+            case "cleanup":
+                return true;
+        }
+        return false;
+    }
+
     function getTestNames(tests) {
         var result = [];
         for (var testName in tests) {
-            if (+testName !== testName) {
+            if (+testName !== testName && !isSpecialName(testName)) {
                 var test = tests[testName];
                 if (getTypeOf(test) === "function")
                     result.push(testName);
@@ -105,9 +114,10 @@
             if (tests.name) results.name = tests.name;
         }
 
-        return yap.all(getTestNames(tests).map(function (name) {
+        function execute(name) {
             return yap.defer(function (resolve, error, progress) {
                 var succeeded;
+                var result;
                 function report(v) {
                     results[v.name] = { success: v.success, error: v.error };
                     if (progress) progress(v);
@@ -115,23 +125,33 @@
                 }
                 function success() {
                     succeeded = true;
-                    report({ name: name, success: true, tests: result });
+                    if (!isSpecialName(name))
+                        report({ name: name, success: true, tests: result });
+                    else
+                        resolve();
                 }
                 function failed(e) {
+                    if (isSpecialName(name))
+                        return e;
                     report({ name: name, success: false, error: e, tests: result });
                 }
                 try {
-                    var result = tests[name]();
+                    var test = tests[name];
+                    if (test)
+                        result = tests[name]();
                 }
                 catch (e) {
                     failed(e);
                     return;
                 }
                 if (getTypeOf(result) === "function" && result.length == 1) {
-                    // Assume the result is a continuation and wrap it in a promise
-                    result = yap.defer(function (resolve) { result(resolve); });
+                    // Assume the result is a continuation
+                    result(function (error, value) {
+                        if (error) failed(error);
+                        else success(value);
+                    });
                 }
-                if (yap.like(result)) {
+                else if (yap.like(result)) {
                     var time = tests.timeout || 10000;
                     var timeout = yap.timeout(time).then(function () {
                         if (!succeeded)
@@ -139,10 +159,17 @@
                     });
                     result.then(success, failed).then(function () { timeout.cancel(); });
                 }
-                else
+                else 
                     success();
             });
-        })).then(function () {
+        }
+
+        var initialize = execute("initialize");
+        return initialize.then(function () {
+            return yap.all(getTestNames(tests).map(execute));
+        }).then(function () {
+            return execute("cleanup");
+        }).then(function () {
             return results;
         });
     }
